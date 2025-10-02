@@ -8,7 +8,7 @@
 (function(){
   const PAT = /https?:\/\/myr-apiimg\.iberostar\.com\/media\/360\/[^\s'"<>]+\.html/ig;
 
-  // copia al portapapeles (async). Usa navigator.clipboard si está, si no, fallback execCommand.
+  // copia al portapapeles la URL. Usa navigator.clipboard si está, si no, fallback execCommand.
   async function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       try {
