@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extraer visores 180/360 de Navegacion
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Extrae enlaces 180/360 y copia al portapapeles
 // @match        *://*.booking.iberostar.com/*
 // @grant        none
@@ -9,6 +9,7 @@
 // @downloadURL  https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/Pano_URL_Extractor.js
 // @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/Pano_URL_Extractor.js
 // ==/UserScript==
+
 
 
 (function(){
