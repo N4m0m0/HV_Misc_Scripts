@@ -1,9 +1,15 @@
 // ==UserScript==
-// @name         Pano_URL_Extractor
+// @name         Extraer visores 180/360 de Navegacion
+// @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
+// @version      1.0.1
+// @description  Extrae enlaces 180/360 y copia al portapapeles
 // @match        *://*.booking.iberostar.com/*
 // @grant        none
 // @run-at       document-idle
+// @downloadURL  https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/Pano_URL_Extractor.js
+// @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/Pano_URL_Extractor.js
 // ==/UserScript==
+
 
 (function(){
   const PAT = /https?:\/\/myr-apiimg\.iberostar\.com\/media\/360\/[^\s'"<>]+\.html/ig;
