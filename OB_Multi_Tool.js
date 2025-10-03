@@ -19,13 +19,13 @@
   'use strict';
 
   // --- URL de configuración remota (RAW del JSON del commit indicado) ---
-  const CONFIG_URL = 'https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/41b133a7c7dfd599768cf8598d02f864476893b4/OB_Multi_Tool_Config.json';
+  const CONFIG_URL = 'https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool_Config.json';
 
   // --- Defaults por si el JSON no responde o no define campos ---
   const DEFAULT_CONFIG = {
     allowed_domains: [],// vacío = permitido en todos
-    engines: ['Google', 'Bing', 'DuckDuckGo'],
-    ui: { position: 'top-right' }// reservado para futuros ajustes
+    engines: ['synxis '],
+    ui: { position: 'top-left' }// reservado para futuros ajustes
   };
 
   // ====== Utilidad: fetch JSON con GM.xmlHttpRequest ======
@@ -147,4 +147,5 @@
   }
 
   buildPanel(cfg);
-})})();
+})();
+})();
