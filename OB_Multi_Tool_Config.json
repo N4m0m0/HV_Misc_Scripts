@@ -1,4 +1,8 @@
 {
-  "domains": [],
+  "domains": [
+    "*.booking.iberostar.com",
+    "booking.iberostar.com",
+    "myr-apiimg.iberostar.com"
+  ],
   "cacheTTLSeconds": 3600
 }
