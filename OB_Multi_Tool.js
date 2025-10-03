@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      0.0.3
+// @version      0.0.4
 // @description  <Multy-Herramienta para Onboarding>.
 // @author       N4m0m0
 // @match        *://*/*
@@ -54,7 +54,7 @@
   GM_addStyle(`
     .obmt-panel {
       position: fixed; top: 16px; right: 16px; z-index: 999999;
-      background: #111827; color: #e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #ff0303ff; color: #e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       border: 1px solid #374151; border-radius: 12px; padding: 12px;
       box-shadow: 0 10px 30px rgba(0,0,0,.35); min-width: 300px;
     }
