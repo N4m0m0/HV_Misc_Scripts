@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      0.0.5
-// @description  <Multy-Herramienta para Onboarding>.
+// @version      0.0.6
+// @description  Panel base (DDL + input + R.T./Code). Panel siempre visible; acciones bloqueadas por allowlist con aviso.
 // @author       N4m0m0
 // @match        *://*/*
 // @run-at       document-idle
@@ -18,45 +18,51 @@
 (function() {
   'use strict';
 
-  // --- URL de configuración remota (RAW del JSON del commit indicado) ---
+  // --- REMOTE CONFIG ---
   const CONFIG_URL = 'https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool_Config.json';
 
-  // --- Defaults por si el JSON no responde o no define campos ---
   const DEFAULT_CONFIG = {
-    allowed_domains: [],// vacío = permitido en todos
-    engines: ['synxis '],
-    ui: { position: 'top-left' }// reservado para futuros ajustes
+    allowed_domains: [],           // vacío => permitido en todos
+    engines: ['Synxis'],
+    ui: { position: 'top-right' }  // 'top-right' | 'top-left'
   };
 
-  // ====== Utilidad: fetch JSON con GM.xmlHttpRequest ======
+  // --- FETCH JSON VIA GM_xhr ---
   function fetchJSON(url) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       GM_xmlhttpRequest({
         method: 'GET',
         url,
         timeout: 10000,
         onload: (res) => {
-          try {
-            const data = JSON.parse(res.responseText);
-            resolve(data);
-          } catch (e) {
-            console.warn('[OB-MT] JSON inválido, usando defaults.', e);
-            resolve(null);
-          }
+          try { resolve(JSON.parse(res.responseText)); }
+          catch (e) { console.warn('[OB-MT] JSON inválido, usando defaults.', e); resolve(null); }
         },
-        onerror: () => resolve(null),
-        ontimeout: () => resolve(null),
+        onerror: (e) => { console.warn('[OB-MT] onerror', e); resolve(null); },
+        ontimeout: () => { console.warn('[OB-MT] timeout'); resolve(null); },
       });
     });
   }
 
-  // ====== Estilos del panel ======
+  // --- GLOB/ALLOWLIST ---
+  function globToRegExp(glob) {
+    const esc = String(glob).replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    const rx = '^' + esc.replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
+    return new RegExp(rx, 'i');
+  }
+  function isAllowed(host, patterns) {
+    const list = Array.isArray(patterns) ? patterns : [];
+    if (list.length === 0) return true;
+    return list.some(p => globToRegExp(p).test(host));
+  }
+
+  // --- UI / STYLES ---
   GM_addStyle(`
     .obmt-panel {
-      position: fixed; top: 16px; right: 16px; z-index: 999999;
-      background: #ff0303ff; color: #e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      border: 1px solid #374151; border-radius: 12px; padding: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35); min-width: 300px;
+      position: fixed; top: 16px; right: 16px; z-index: 2147483647 !important;
+      background: #111827; color: #e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      border: 1px solid #374151; border-radius: 12px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      min-width: 300px;
     }
     .obmt-title { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
     .obmt-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
@@ -69,33 +75,62 @@
     .obmt-btn { cursor: pointer; }
     .obmt-btn[disabled] { opacity: .5; cursor: not-allowed; }
     .obmt-meta { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    .obmt-toast {
+      position: fixed; left: 16px; bottom: 16px; z-index: 2147483647 !important;
+      padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.85); color: #fff; font-size: 13px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.3);
+    }
   `);
 
-  // ====== Construcción del panel (sin acciones todavía) ======
+  function showToast(msg, ms=2200) {
+    const id = 'obmt_toast';
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.className = 'obmt-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, ms);
+  }
+
+  function positionPanel(panel, pos) {
+    panel.style.top = '16px';
+    panel.style.bottom = '';
+    if (pos === 'top-left') {
+      panel.style.left = '16px';
+      panel.style.right = '';
+    } else {
+      panel.style.right = '16px';
+      panel.style.left = '';
+    }
+  }
+
+  // --- BUILD PANEL ---
   function buildPanel(cfg) {
     const panel = document.createElement('div');
     panel.className = 'obmt-panel';
     panel.innerHTML = `
       <div class="obmt-title">OB Multi Tool</div>
-
       <div class="obmt-row">
         <select class="obmt-select" id="obmt-engine"></select>
         <input class="obmt-input" id="obmt-text" type="text" placeholder="Escribe aquí…" />
       </div>
-
       <div class="obmt-row">
-        <button class="obmt-btn" id="obmt-btn-rt" title="Acción R.T.">R.T.</button>
-        <button class="obmt-btn" id="obmt-btn-code" title="Acción Code (próx.)" disabled>Code</button>
+        <button class="obmt-btn" id="obmt-btn-rt"   title="Acción R.T.">R.T.</button>
+        <button class="obmt-btn" id="obmt-btn-code" title="Acción Code">Code</button>
       </div>
-
-      <div class="obmt-meta">
-        Dom: <strong>${location.host}</strong>
-      </div>
+      <div class="obmt-meta">Dom: <strong>${location.hostname}</strong></div>
     `;
+    document.body.appendChild(panel);
+    positionPanel(panel, cfg?.ui?.position || 'top-right');
 
-    // Poblamos engines desde config o defaults
+    // Poblamos engines
     const ddl = panel.querySelector('#obmt-engine');
-    const engines = Array.isArray(cfg.engines) && cfg.engines.length ? cfg.engines : DEFAULT_CONFIG.engines;
+    const engines = (Array.isArray(cfg.engines) && cfg.engines.length) ? cfg.engines : DEFAULT_CONFIG.engines;
     engines.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name;
@@ -103,49 +138,48 @@
       ddl.appendChild(opt);
     });
 
-    // Persistimos última selección
+    // Persistencia selección
     const last = GM_getValue('obmt_engine', engines[0]);
     if (engines.includes(last)) ddl.value = last;
     ddl.addEventListener('change', () => GM_setValue('obmt_engine', ddl.value));
 
-    // Botones (sin lógica; solo placeholders visuales)
+    // Helpers
+    const getCurrentEngine = () => ddl.value;
+    const getInputText = () => panel.querySelector('#obmt-text').value.trim();
+    const hostAllowed = () => isAllowed(location.hostname, cfg.allowed_domains);
+
+    // Acciones (bloqueo por dominio)
     panel.querySelector('#obmt-btn-rt').addEventListener('click', () => {
-      // Aquí después añadiremos la acción real de R.T.
-      console.log('[OB-MT] R.T. pulsado — (sin acción todavía)');
+      if (!hostAllowed()) {
+        showToast('Dominio no permitido por configuración.');  // ← mensaje si NO está permitido
+        console.log('[OB-MT] Bloqueado por allowlist', { host: location.hostname, allow: cfg.allowed_domains });
+        return;
+      }
+      // TODO: acción real R.T.
+      showToast('R.T. — pendiente implementar (dominio permitido).');
+      console.log('[OB-MT] R.T. OK', { engine: getCurrentEngine(), text: getInputText() });
     });
+
     panel.querySelector('#obmt-btn-code').addEventListener('click', () => {
-      // Reservado para la acción "Code"
-      console.log('[OB-MT] Code pulsado — (desactivado)');
+      if (!hostAllowed()) {
+        showToast('Dominio no permitido por configuración.');
+        console.log('[OB-MT] Bloqueado por allowlist (Code)', { host: location.hostname, allow: cfg.allowed_domains });
+        return;
+      }
+      // TODO: acción real Code
+      showToast('Code — pendiente implementar (dominio permitido).');
+      console.log('[OB-MT] Code OK', { engine: getCurrentEngine(), text: getInputText() });
     });
-
-    document.body.appendChild(panel);
   }
 
-  // ====== Main ======
-(async function init() {
-  const remote = await fetchJSON(CONFIG_URL);
-  const cfg = Object.assign({}, DEFAULT_CONFIG, remote || {});
-  const allow = Array.isArray(cfg.allowed_domains) ? cfg.allowed_domains : [];
+  // --- INIT ---
+  (async function init() {
+    const remote = await fetchJSON(CONFIG_URL);
+    const cfg = Object.assign({}, DEFAULT_CONFIG, remote || {});
+    console.log('[OB-MT] init', { hostname: location.hostname, cfg });
 
-  // Allowlist: si la lista está vacía => permitido en todos; si no, usa glob-match.
-  const hostname = location.hostname;
+    // Panel SIEMPRE visible:
+    buildPanel(cfg);
+  })();
 
-  function globToRegExp(glob) {
-    // Escapa regex, luego convierte * -> .*, ? -> .
-    const esc = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-    const rx = '^' + esc.replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
-    return new RegExp(rx, 'i');
-  }
-  function isAllowed(host, patterns) {
-    if (patterns.length === 0) return true;
-    return patterns.some(p => globToRegExp(p).test(host));
-  }
-
-  if (!isAllowed(hostname, allow)) {
-    console.log('[OB-MT] Dominio no permitido por configuración:', { hostname, allow });
-    return;
-  }
-
-  buildPanel(cfg);
-})();
 })();
