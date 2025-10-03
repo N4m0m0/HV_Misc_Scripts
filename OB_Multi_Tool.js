@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      0.0.2
+// @version      0.0.3
 // @description  <Multy-Herramienta para Onboarding>.
 // @author       N4m0m0
 // @match        *://*/*
@@ -23,9 +23,9 @@
 
   // --- Defaults por si el JSON no responde o no define campos ---
   const DEFAULT_CONFIG = {
-    allowed_domains: [],              // vacío = permitido en todos
+    allowed_domains: [],// vacío = permitido en todos
     engines: ['Google', 'Bing', 'DuckDuckGo'],
-    ui: { position: 'top-right' }     // reservado para futuros ajustes
+    ui: { position: 'top-right' }// reservado para futuros ajustes
   };
 
   // ====== Utilidad: fetch JSON con GM.xmlHttpRequest ======
