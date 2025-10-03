@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      0.0.4
+// @version      0.0.5
 // @description  <Multy-Herramienta para Onboarding>.
 // @author       N4m0m0
 // @match        *://*/*
