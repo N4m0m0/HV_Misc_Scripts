@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Extraer visores 180/360 — botón sólo en dominios permitidos
+// @name         Extractor visores 180/360 — Sólo en dominios permitidos
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.5
+// @version      1.0.6
 // @description  Extrae enlaces 180/360 y copia al portapapeles. El botón sólo aparece en dominios permitidos; la config se gestiona desde repo remoto.
 // @match        *://*/*
 // @grant        none
