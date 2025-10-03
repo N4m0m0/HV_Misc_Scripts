@@ -11,8 +11,8 @@
 // @grant        GM_setValue
 // @grant        GM_addStyle
 // @connect      raw.githubusercontent.com
-// @downloadURL  https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/41b133a7c7dfd599768cf8598d02f864476893b4/OB_Multi_Tool.js
-// @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/41b133a7c7dfd599768cf8598d02f864476893b4/OB_Multi_Tool.js
+// @downloadURL  https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool.js
+// @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool.js
 // ==/UserScript==
 
 (function() {
