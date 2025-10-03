@@ -1,6 +1,6 @@
 {
-  "version": "0.0.1",
-  "allowed_domains": ["*.book.royaltonresorts.*"],
+  "version": "0.0.2",
+  "allowed_domains": ["*.book.royaltonresorts.*", "book.royaltonresorts.*"],
   "engines": [
     "Synxis"
   ]
