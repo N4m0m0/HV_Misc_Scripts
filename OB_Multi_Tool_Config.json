@@ -1,7 +1,4 @@
 {
-  "version": "0.0.2",
-  "allowed_domains": ["*.book.royaltonresorts.*", "book.royaltonresorts.*"],
-  "engines": [
-    "Synxis"
-  ]
+  "domains": [],
+  "cacheTTLSeconds": 3600
 }
