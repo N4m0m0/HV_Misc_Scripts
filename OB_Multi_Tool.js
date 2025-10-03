@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      0.0.1
+// @version      0.0.2
 // @description  <Multy-Herramienta para Onboarding>.
 // @author       N4m0m0
 // @match        *://*/*
@@ -122,17 +122,30 @@
   }
 
   // ====== Main ======
-  (async function init() {
-    const remote = await fetchJSON(CONFIG_URL);
-    const cfg = Object.assign({}, DEFAULT_CONFIG, remote || {});
-    const allow = Array.isArray(cfg.allowed_domains) ? cfg.allowed_domains : [];
+(async function init() {
+  const remote = await fetchJSON(CONFIG_URL);
+  const cfg = Object.assign({}, DEFAULT_CONFIG, remote || {});
+  const allow = Array.isArray(cfg.allowed_domains) ? cfg.allowed_domains : [];
 
-    // Allowlist: si la lista está vacía => permitido en todos; si no, solo si incluye el host actual.
-    if (allow.length > 0 && !allow.includes(location.host)) {
-      console.log('[OB-MT] Dominio no permitido por configuración. Panel oculto.');
-      return;
-    }
-    buildPanel(cfg);
-  })();
+  // Allowlist: si la lista está vacía => permitido en todos; si no, usa glob-match.
+  const hostname = location.hostname;
 
+  function globToRegExp(glob) {
+    // Escapa regex, luego convierte * -> .*, ? -> .
+    const esc = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    const rx = '^' + esc.replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
+    return new RegExp(rx, 'i');
+  }
+  function isAllowed(host, patterns) {
+    if (patterns.length === 0) return true;
+    return patterns.some(p => globToRegExp(p).test(host));
+  }
+
+  if (!isAllowed(hostname, allow)) {
+    console.log('[OB-MT] Dominio no permitido por configuración:', { hostname, allow });
+    return;
+  }
+
+  buildPanel(cfg);
 })();
+
