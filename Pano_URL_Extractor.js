@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extractor visores 180/360 — Sólo en dominios permitidos
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.6
+// @version      1.0.7
 // @description  Extrae enlaces 180/360 y copia al portapapeles. El botón sólo aparece en dominios permitidos; la config se gestiona desde repo remoto.
 // @match        *://*/*
 // @grant        none
@@ -19,11 +19,11 @@
   const DEFAULT_CONFIG = {
     domains: ["*.booking.iberostar.com"],
     patterns: [
-      "https?:\\/\\/myr-apiimg\\.iberostar\\.com\\/media\\/(?:360|180)\\/[\\^\\s'\"<>]+\\.html",
-      "https?:\\/\\/[^\\/\\s'\"<>]+\\/media\\/(?:360|180)\\/[\\^\\s'\"<>]+\\.html"
+      "https?:\\/\\/myr-apiimg\\.iberostar\\.com\\/media\\/(?:360|180)\\/[^\\s'\"<>]+\\.html",
+      "https?:\\/\\/[^\\/\\s'\"<>]+\\/media\\/(?:360|180)\\/[^\\s'\"<>]+\\.html"
     ],
     copyAsCsv: false,
-    cacheTTLSeconds: 3600
+    cacheTTLSeconds: 3000
   };
   const FETCH_TIMEOUT_MS = 8000;
 
