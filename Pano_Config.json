@@ -6,5 +6,5 @@
   "https?:\\/\\/myr-apiimg\\.iberostar\\.com\\/media\\/(?:360|180)\\/[^\\s'\"<>]+\\.html"
   ],
   "copyAsCsv": false,
-  "cacheTTLSeconds": 3600
+  "cacheTTLSeconds": 3500
 }
