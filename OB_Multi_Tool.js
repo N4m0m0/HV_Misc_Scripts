@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  Panel con campo + botones.
 // @match        *://*/*
 // @grant        none
@@ -187,12 +187,21 @@
         });
 
 
-        // Hotel-Code (placeholder)
+        // HOTEL-CODE: extraer y mostrar
         btnH && btnH.addEventListener('click', () => {
-          const txt = (input.value || '').trim();
-          console.log('OB Multi Tool: H.Code ->', txt);
-          showToast('H.Code pulsado — (sin acción)', 2000);
+          const code = getHotelCode();
+          const out = shadow.getElementById('ob_multi_out');
+          if (code) {
+            if (out) out.textContent = JSON.stringify({ hotel: code }, null, 2);
+            showToast(`Hotel-Code: ${code}`, 3000);
+            console.log('OB Multi Tool: Hotel-Code ->', code);
+          } else {
+            if (out) out.textContent = 'No se encontró hotel-code.';
+            showToast('No se encontró hotel-code', 3000);
+            console.warn('OB Multi Tool: Hotel-Code not found');
+          }
         });
+
 
         input && input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnR.click(); });
 
@@ -222,6 +231,60 @@
         clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', t);
       } catch (e) { console.warn('OB Multi Tool: toast failed', e); }
     }
+
+    // Obtiene el hotel-code buscando primero en __NEXT_DATA__/variantes y luego en la URL (?hotel=)
+function getHotelCode() {
+  // 1) Next.js data: ids típicos "__NEXT_DATA__", por si acaso soportamos "__NEXI_DATA__" (typo frecuente) y otros
+  const candidates = Array.from(document.querySelectorAll('script[type="application/json"]'))
+    .filter(s => {
+      const id = (s.id || '').toUpperCase();
+      return id.includes('NEXT_DATA') || id.includes('NEXI_DATA') || id.includes('NEXT') || id.includes('NEXI');
+    });
+
+  for (const s of candidates) {
+    try {
+      const txt = s.textContent || s.innerText || '';
+      if (!txt) continue;
+      const data = JSON.parse(txt);
+
+      // Rutas habituales
+      const fromQuery = data?.query?.hotel ?? data?.props?.pageProps?.hotel ?? data?.props?.hotel;
+      if (fromQuery != null) return String(fromQuery);
+
+      // Búsqueda recursiva por si cambia la estructura
+      const stack = [data];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (cur && typeof cur === 'object') {
+          if (Object.prototype.hasOwnProperty.call(cur, 'hotel')) {
+            const val = cur['hotel'];
+            if (val != null && (typeof val === 'string' || typeof val === 'number')) {
+              return String(val);
+            }
+          }
+          for (const k in cur) if (cur[k] && typeof cur[k] === 'object') stack.push(cur[k]);
+        }
+      }
+    } catch { /* seguir buscando */ }
+  }
+
+  // 2) URL ?hotel=XXXX
+  try {
+    const u = new URL(location.href);
+    const q = u.searchParams.get('hotel');
+    if (q) return q;
+  } catch {}
+
+  // 3) Último recurso: buscar en cualquier <script> el patrón "hotel":"12345" o "hotel":12345
+  for (const s of Array.from(document.scripts)) {
+    const txt = s.textContent || '';
+    const m = txt.match(/"hotel"\s*:\s*"?(?<id>\d+)"?/);
+    if (m && m.groups && m.groups.id) return m.groups.id;
+  }
+
+  return null;
+}
+
 
     // ---------- Inyección con reintentos ----------
     async function ensureInjectedWithRetries(cfg) {
