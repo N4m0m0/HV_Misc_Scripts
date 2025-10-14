@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.12
+// @version      1.1.0
 // @description  Panel con campo + botones.
 // @match        *://*/*
 // @grant        none
