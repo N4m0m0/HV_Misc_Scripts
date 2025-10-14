@@ -1,47 +1,40 @@
 // ==UserScript==
-// @name         OB Multi Tool — buscador robusto (config local, shadow DOM, reintentos)
+// @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.5
-// @description  Panel con campo + botones. Inyección robusta: shadow DOM, reintentos, escucha SPA. Configuración embebida (sin fetch remoto).
+// @version      1.0.10
+// @description  Panel con campo + botones. 
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
+// @downloadURL  https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool.js
+// @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool.js
 // ==/UserScript==
 
 (function(){
   'use strict';
   try {
-    console.log('OB Multi Tool started (local config)');
+    console.log('OB Multi Tool started');
 
-    // ---------- CONFIG (LOCAL: edítalo aquí) ----------
-    // Dominios permitidos: usa '*' para permitir en todos los host.
-    // Puedes usar comodines en cualquier parte: '*reservation.barcelo.*', '*.barcelo.com', 'reservation.barcelo.com', etc.
+    // ---------- CONFIG (LOCAL) ----------
+    // IMPORTANTE: con la función domainMatches ORIGINAL
+    //   - Soporta '*' (todo), coincidencia exacta y patrones '*.dominio.com'
+    //   - NO soporta '*reservation.barcelo.*'
     const DEFAULT_CONFIG = {
       domains: [
-        '*reservation.barcelo.*',
-        'reservation.barcelo.*'
-        // '*' // -> descomenta si quieres forzar en todas las webs
-      ],
-      // otras claves que quieras añadir en el futuro:
+        'reservation.barcelo.com'   // coincidencia exacta
+      ]
     };
 
-    // ---------- UTILIDADES ----------
-    // domainMatches: soporte de "glob" con '*' en cualquier posición.
+    // ---------- UTILIDADES (ORIGINALES) ----------
     function domainMatches(pattern, host) {
-      try {
-        pattern = String(pattern || '').trim().toLowerCase();
-        host = String(host || '').toLowerCase();
-        if (!pattern) return false;
-        if (pattern === '*' || pattern === '*:*') return true;
-
-        // Escape regex special chars, then replace '*' por '.*'
-        const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-        const re = new RegExp('^' + escaped + '$');
-        return re.test(host);
-      } catch (e) {
-        console.warn('OB Multi Tool: domainMatches error', e);
-        return false;
+      pattern = String(pattern).trim().toLowerCase();
+      host = String(host).toLowerCase();
+      if(pattern === '*' || pattern === '*:*') return true;
+      if(pattern.startsWith('*.')) {
+        const base = pattern.slice(2);
+        return host === base || host.endsWith('.' + base);
       }
+      return host === pattern || host.endsWith('.' + pattern);
     }
 
     // ---------- UI (shadow DOM) ----------
@@ -52,7 +45,7 @@
           .panel {
             position: fixed;
             left: 12px;
-            top: 12px;
+            top: 24px;
             z-index: 999999999;
             width: 320px;
             background: #fff;
@@ -92,11 +85,11 @@
       try {
         const host = document.createElement('div');
         host.id = 'ob_multi_host';
-        // append to documentElement to be resilient if body replaced
+        // append to documentElement to be resiliente si body se reemplaza
         (document.documentElement || document.body || document).appendChild(host);
 
         const shadow = host.attachShadow({ mode: 'open' });
-        // trigger button in light DOM (outside shadow) for easier click capture if needed
+        // botón trigger fuera del shadow para que siempre sea clicable
         const trigger = document.createElement('button');
         trigger.id = 'ob_multi_trigger';
         trigger.textContent = 'OB Tool';
@@ -106,14 +99,14 @@
         });
         host.appendChild(trigger);
 
-        // panel inside shadow
+        // panel dentro del shadow
         shadow.innerHTML = buildPanelHTML();
         const btnClose = shadow.getElementById('ob_multi_close');
         const input = shadow.getElementById('ob_multi_input');
         const btnR = shadow.getElementById('ob_multi_rcodes');
         const btnH = shadow.getElementById('ob_multi_hcode');
 
-        // attach handlers
+        // handlers
         trigger.addEventListener('click', () => {
           const panel = shadow.getElementById('panel');
           panel.style.display = panel.style.display === 'none' ? 'block' : 'block';
@@ -139,7 +132,7 @@
       }
     }
 
-    // toast in main document for visibility (not in shadow)
+    // toast fuera del shadow para visibilidad
     function showToast(msg, t=2500) {
       try {
         const id = 'ob_multi_toast';
@@ -155,10 +148,10 @@
       } catch(e){ console.warn('OB Multi Tool: toast failed', e); }
     }
 
-    // ensure injection with retries and observers
+    // ensure injection con reintentos
     async function ensureInjectedWithRetries(cfg) {
-      const maxRetries = 30;        // tries
-      const delayMs = 1000;         // between tries
+      const maxRetries = 30;
+      const delayMs = 1000;
       for(let i=0;i<maxRetries;i++){
         try {
           const host = location.hostname;
@@ -180,7 +173,7 @@
       return false;
     }
 
-    // observe removal and re-inject
+    // observar eliminación y reinyectar
     function setupMutationWatch(cfg) {
       try {
         const docEl = document.documentElement || document;
@@ -194,7 +187,7 @@
       } catch(e){ console.warn('OB Multi Tool: mutation observer failed', e); }
     }
 
-    // hook history API to detect SPA navigation
+    // hook de history para SPA
     function setupHistoryHook(cfg) {
       try {
         const _push = history.pushState;
@@ -211,15 +204,14 @@
       } catch(e){ console.warn('OB Multi Tool: history hook failed', e); }
     }
 
+    // atajo para “recargar” (ahora simplemente re-intenta con la config local)
     function setupShortcut(cfg) {
       window.addEventListener('keydown', async (ev) => {
         if(ev.ctrlKey && ev.shiftKey && (ev.code === 'KeyR' || ev.key.toLowerCase()==='r')) {
           ev.preventDefault();
-          showToast('Recargando configuración local...', 1400);
-          // recarga la configuración local (en este caso DEFAULT_CONFIG)
-          const cfgNew = DEFAULT_CONFIG;
-          await ensureInjectedWithRetries(cfgNew);
-          showToast('Recarga completada', 1200);
+          showToast('Reinyectando con configuración local...', 1400);
+          await ensureInjectedWithRetries(cfg);
+          showToast('Hecho', 1200);
         }
       });
     }
@@ -227,7 +219,7 @@
     // ----- init -----
     (async function init(){
       try {
-        const cfg = DEFAULT_CONFIG; // usamos la config embebida (sin fetch remoto)
+        const cfg = DEFAULT_CONFIG; // Config embebida
         console.log('OB Multi Tool: config used at init (local):', cfg);
         const injected = await ensureInjectedWithRetries(cfg);
         if(injected) {
