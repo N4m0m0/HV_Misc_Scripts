@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool — buscador robusto (config remota, shadow DOM, reintentos)
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.2
+// @version      1.0.3
 // @description  Panel con campo + botones. Inyección robusta: shadow DOM, reintentos, escucha SPA. Config remota controlada desde repo.
 // @match        *://*/*
 // @grant        none
@@ -18,7 +18,7 @@
     // ---------- CONFIG ----------
     const CONFIG_URL = 'https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/OB_Multi_Tool_Config.json';
     const LS_KEY = 'ob_multi_tool_remote_config_v1';
-    const DEFAULT_CONFIG = { domains: ["*.booking.iberostar.com"], cacheTTLSeconds: 3600 };
+    const DEFAULT_CONFIG = { domains: ["*reservation.barcelo.*"], cacheTTLSeconds: 3600 };
     const FETCH_TIMEOUT_MS = 8000;
 
     // fetch con timeout
@@ -91,7 +91,7 @@
           .panel {
             position: fixed;
             left: 12px;
-            top: 12px;
+            top: 24px;
             z-index: 999999999;
             width: 320px;
             background: #fff;
@@ -117,8 +117,8 @@
             <button id="ob_multi_close" class="close" title="Cerrar">✕</button>
           </div>
           <div style="display:flex;gap:8px">
-            <button id="ob_multi_rcodes" class="btn rc">R.Codes</button>
-            <button id="ob_multi_hcode" class="btn hc">H.Code</button>
+            <button id="ob_multi_rcodes" class="btn rc">Room-Codes</button>
+            <button id="ob_multi_hcode" class="btn hc">Hotel-Code</button>
           </div>
           <div class="hint">Introduce texto y pulsa un botón.</div>
         </div>
