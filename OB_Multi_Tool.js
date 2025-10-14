@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Panel con campo + botones.
 // @match        *://*/*
 // @grant        none
@@ -128,10 +128,10 @@
     <button id="ob_multi_close" class="close" title="Cerrar">✕</button>
   </div>
   <div style="display:flex;gap:8px">
-    <button id="ob_multi_rcodes" class="btn rc">Room-Codes</button>
+    <button id="ob_multi_rcodes" class="btn rc">Search-Codes</button>
     <button id="ob_multi_hcode" class="btn hc">Hotel-Code</button>
   </div>
-  <div class="hint">Escribe el atributo a buscar y pulsa Room-Codes. Si lo dejas vacío, usa "data-target-room-code".</div>
+  <div class="hint">Escribe el atributo a buscar y pulsa Search-Codes. Si lo dejas vacío, usa "data-target-room-code".</div>
   <div id="ob_multi_out" class="out"></div>
 </div>`;
       return html;
@@ -150,7 +150,7 @@
         trigger.id = 'ob_multi_trigger';
         trigger.textContent = 'OB Tool';
         Object.assign(trigger.style, {
-          position: 'fixed', left: '12px', top: '24px', zIndex: 999999999, padding: '8px 10px',
+          position: 'fixed', left: '12px', top: '65px', zIndex: 999999999, padding: '8px 10px',
           background: '#1976D2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer',
           boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
         });
