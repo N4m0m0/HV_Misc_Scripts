@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool — buscador robusto (config local, shadow DOM, reintentos)
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.4
+// @version      1.0.5
 // @description  Panel con campo + botones. Inyección robusta: shadow DOM, reintentos, escucha SPA. Configuración embebida (sin fetch remoto).
 // @match        *://*/*
 // @grant        none
@@ -15,25 +15,33 @@
 
     // ---------- CONFIG (LOCAL: edítalo aquí) ----------
     // Dominios permitidos: usa '*' para permitir en todos los host.
-    // Ejemplos:
-    //  ["*"]                         -> en todas partes (útil para pruebas)
+    // Puedes usar comodines en cualquier parte: '*reservation.barcelo.*', '*.barcelo.com', 'reservation.barcelo.com', etc.
     const DEFAULT_CONFIG = {
-      domains: ["*reservation.barcelo.com",
-                "reservation.barcelo.*"
-      ],          // dominios permitidos
+      domains: [
+        '*reservation.barcelo.*',
+        'reservation.barcelo.*'
+        // '*' // -> descomenta si quieres forzar en todas las webs
+      ],
       // otras claves que quieras añadir en el futuro:
     };
 
     // ---------- UTILIDADES ----------
+    // domainMatches: soporte de "glob" con '*' en cualquier posición.
     function domainMatches(pattern, host) {
-      pattern = String(pattern).trim().toLowerCase();
-      host = String(host).toLowerCase();
-      if(pattern === '*' || pattern === '*:*') return true;
-      if(pattern.startsWith('*.')) {
-        const base = pattern.slice(2);
-        return host === base || host.endsWith('.' + base);
+      try {
+        pattern = String(pattern || '').trim().toLowerCase();
+        host = String(host || '').toLowerCase();
+        if (!pattern) return false;
+        if (pattern === '*' || pattern === '*:*') return true;
+
+        // Escape regex special chars, then replace '*' por '.*'
+        const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+        const re = new RegExp('^' + escaped + '$');
+        return re.test(host);
+      } catch (e) {
+        console.warn('OB Multi Tool: domainMatches error', e);
+        return false;
       }
-      return host === pattern || host.endsWith('.' + pattern);
     }
 
     // ---------- UI (shadow DOM) ----------
