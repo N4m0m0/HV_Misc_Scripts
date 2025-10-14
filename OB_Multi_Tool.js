@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.0.11
+// @version      1.0.12
 // @description  Panel con campo + botones.
 // @match        *://*/*
 // @grant        none
@@ -150,7 +150,7 @@
         trigger.id = 'ob_multi_trigger';
         trigger.textContent = 'OB Tool';
         Object.assign(trigger.style, {
-          position: 'fixed', left: '12px', top: '12px', zIndex: 999999999, padding: '8px 10px',
+          position: 'fixed', left: '12px', top: '24px', zIndex: 999999999, padding: '8px 10px',
           background: '#1976D2', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer',
           boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
         });
@@ -169,15 +169,23 @@
 
         btnClose && btnClose.addEventListener('click', () => host.remove());
 
-        // ROOM-CODES: buscar, mostrar y descargar JSON
+        // ROOM-CODES: buscar, mostrar y (si hay) descargar JSON
         btnR && btnR.addEventListener('click', () => {
           const attr = (input.value || '').trim() || 'data-target-room-code';
           const items = extractRoomCodes(attr);
+
           renderResultsInPanel(shadow, items);
-          downloadJSONFile(items);
-          showToast(`Encontrados ${items.length} resultados para "${attr}"`, 3000);
+
+          if (items.length > 0) {
+            downloadJSONFile(items);
+            showToast(`Encontrados ${items.length} resultados para "${attr}" (descargado)`, 3000);
+          } else {
+            showToast(`Sin coincidencias para "${attr}". No se descargó archivo.`, 3000);
+          }
+
           console.log('OB Multi Tool: Room-Codes ->', attr, items);
         });
+
 
         // Hotel-Code (placeholder)
         btnH && btnH.addEventListener('click', () => {
