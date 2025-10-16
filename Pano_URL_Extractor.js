@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extractor visores 180/360
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Extrae enlaces 180/360 y copia al portapapeles.Solo en dominios permitidos.
 // @match        *://*/*
 // @grant        none
@@ -16,6 +16,7 @@ if (window.top !== window) return; // evita ejecutarse en iframes
 // --- Dominios permitidos (usa el dominio base; vale con subdominios) ---
 const ALLOWED_DOMAINS = [
   "booking.iberostar.com",
+  "myroom.iberostar.com",
   "iberostar.com"
 ];
 
