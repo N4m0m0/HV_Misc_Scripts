@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Extractor visores 180/360
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.2.1
-// @description  Extrae enlaces 180/360 y copia al portapapeles.Solo en dominios permitidos.
+// @version      1.2.2
+// @description  Extrae enlaces 180/360 y copia al portapapeles. Solo en dominios permitidos (iberostar.com, myroom.iberostar.com, booking.iberostar.com, etc.).
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -10,38 +10,35 @@
 // @updateURL    https://raw.githubusercontent.com/N4m0m0/HV_Misc_Scripts/main/Pano_URL_Extractor.js
 // ==/UserScript==
 
+/*  NOTA:
+    - NO bloqueamos iframes: el visor real puede estar dentro de myroom.iberostar.com
+    - Evitamos botones duplicados por frame con un ID único.
+*/
 
-if (window.top !== window) return; // evita ejecutarse en iframes
-
-// --- Dominios permitidos (usa el dominio base; vale con subdominios) ---
+// --- Dominios permitidos (usa base; vale con subdominios) ---
 const ALLOWED_DOMAINS = [
-  "booking.iberostar.com",
+  "iberostar.com",
   "myroom.iberostar.com",
-  "iberostar.com"
+  "booking.iberostar.com",
+  "myr-apiimg.iberostar.com"
 ];
 
-function isAllowedHost(host) {
-  host = host.toLowerCase();
-  return ALLOWED_DOMAINS.some(d => host === d || host.endsWith("." + d));
-}
+(function () {
+  const host = location.hostname.toLowerCase();
+  const allowed = ALLOWED_DOMAINS.some(d => host === d || host.endsWith("." + d));
+  if (!allowed) return;
 
-// Si no estamos en un dominio permitido, no inyectar nada
-if (!isAllowedHost(location.hostname)) return;
+  // Anti-doble inyección (por recargas/SPA/iframes)
+  if (document.getElementById('tm-360-btn')) return;
 
-(function(){
-  const PAT = /https?:\/\/myr-apiimg\.iberostar\.com\/media\/(?:180|360)\/[^\s'"<>]+\.html/ig;
+  // Patrón flexible: permite http/https, admite query/hash y .html opcional al final
+  const PAT = /https?:\/\/myr-apiimg\.iberostar\.com\/media\/(?:180|360)\/[^\s'"<>]+?(?:\.html\b|[\?#][^\s'"<>]*|$)/ig;
 
-  // copia al portapapeles (async). Usa navigator.clipboard si está, si no, fallback execCommand.
+  // --- Utils ---
   async function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch (e) {
-        // fallthrough al fallback
-      }
+    if (navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(text); return true; } catch {}
     }
-    // fallback clásico
     try {
       const ta = document.createElement('textarea');
       ta.style.position = 'fixed';
@@ -52,9 +49,7 @@ if (!isAllowedHost(location.hostname)) return;
       document.execCommand('copy');
       document.body.removeChild(ta);
       return true;
-    } catch (e) {
-      return false;
-    }
+    } catch { return false; }
   }
 
   function showToast(msg, timeout = 3000) {
@@ -80,71 +75,70 @@ if (!isAllowedHost(location.hostname)) return;
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(el._hideTimer);
-    el._hideTimer = setTimeout(()=>{ el.style.display = 'none'; }, timeout);
+    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, timeout);
   }
 
-  async function scanAndCopy(){
+  // helper para evitar problemas con lastIndex de regex global
+  function addMatchesFromString(reGlobal, str, bucket) {
+    if (!str) return;
+    const re = new RegExp(reGlobal.source, reGlobal.flags); // clonar
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      bucket.add(m[0]);
+      if (m.index === re.lastIndex) re.lastIndex++; // defensivo
+    }
+  }
+
+  async function scanAndCopy() {
     const found = new Set();
-    // buscar en atributos comunes
-    document.querySelectorAll('iframe, a, link, script').forEach(el=>{
-      ['src','href','data-src','data-url'].forEach(attr=>{
-        try{
-          let v = el.getAttribute(attr);
-          if(v){
-            try{ v = (new URL(v, location.href)).href }catch(e){}
-            let m;
-            while((m = PAT.exec(v)) !== null) found.add(m[0]);
-          }
-        }catch(e){}
+
+    // 1) Escanear atributos típicos (incluye iframes)
+    document.querySelectorAll('iframe, a, link, script').forEach(el => {
+      ['src', 'href', 'data-src', 'data-url'].forEach(attr => {
+        let v = el.getAttribute?.(attr);
+        if (v) {
+          try { v = (new URL(v, location.href)).href; } catch {}
+          addMatchesFromString(PAT, v, found);
+        }
       });
-      if(el.tagName==='SCRIPT' && el.textContent){
-        let m;
-        while((m = PAT.exec(el.textContent)) !== null) found.add(m[0]);
+      if (el.tagName === 'SCRIPT' && el.textContent) {
+        addMatchesFromString(PAT, el.textContent, found);
       }
     });
-    // buscar en el HTML completo (por si queda en inline)
-    let mm;
-    while((mm = PAT.exec(document.documentElement.innerHTML)) !== null) found.add(mm[0]);
 
-    if(found.size===0){
+    // 2) Escanear HTML completo (por si hay inline)
+    addMatchesFromString(PAT, document.documentElement.innerHTML, found);
+
+    if (found.size === 0) {
       showToast('No se encontraron enlaces myr-apiimg en esta página.', 3500);
       return;
     }
 
-    // preparar texto para copiar: una URL por línea (puedes cambiar a CSV si prefieres)
-    const list = Array.from(found);
-    // opcional: ordenamos para consistencia
-    list.sort();
-    const text = list.join('\n');
-
-    const ok = await copyToClipboard(text);
-    if(ok){
-      showToast(`Copiados ${list.length} enlaces al portapapeles ✅`, 3500);
-      console.log('myr360 links copied:', list);
-    } else {
-      showToast('Error: no se pudo copiar al portapapeles. Revisa permisos.', 5000);
-      console.log('myr360 links (no copiados):', list);
-    }
+    const list = Array.from(found).sort();
+    const ok = await copyToClipboard(list.join('\n'));
+    showToast(ok ? `Copiados ${list.length} enlaces al portapapeles ✅`
+                 : 'Error: no se pudo copiar al portapapeles. Revisa permisos.',
+              ok ? 3500 : 5000);
+    console.log('myr360 links:', list);
   }
 
-  // botón en top-left
+  // --- Botón (uno por frame) ---
   const btn = document.createElement('button');
+  btn.id = 'tm-360-btn';
   btn.textContent = 'Copiar 180/360';
   Object.assign(btn.style, {
-    position:'fixed',
-    left:'22px',
-    top:'82px',
-    zIndex:999999,
-    padding:'8px 12px',
-    background:'#1976D2',
-    color:'#fff',
-    border:'none',
-    borderRadius:'6px',
-    cursor:'pointer',
-    boxShadow:'0 2px 6px rgba(0,0,0,0.2)'
+    position: 'fixed',
+    left: '22px',
+    top: '82px',
+    zIndex: 999999,
+    padding: '8px 12px',
+    background: '#1976D2',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
   });
   btn.addEventListener('click', scanAndCopy);
   document.body.appendChild(btn);
 })();
-
-
