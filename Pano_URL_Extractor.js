@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extractor visores 180/360
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.1.1
+// @version      1.2.0
 // @description  Extrae enlaces 180/360 y copia al portapapeles.Solo en dominios permitidos.
 // @match        *://*/*
 // @grant        none
