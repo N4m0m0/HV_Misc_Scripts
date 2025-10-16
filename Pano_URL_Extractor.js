@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extractor visores 180/360
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Extrae enlaces 180/360 y copia al portapapeles.Solo en dominios permitidos.
 // @match        *://*/*
 // @grant        none
@@ -11,6 +11,21 @@
 // ==/UserScript==
 
 
+if (window.top !== window) return; // evita ejecutarse en iframes
+
+// --- Dominios permitidos (usa el dominio base; vale con subdominios) ---
+const ALLOWED_DOMAINS = [
+  "booking.iberostar.com",
+  "iberostar.com"
+];
+
+function isAllowedHost(host) {
+  host = host.toLowerCase();
+  return ALLOWED_DOMAINS.some(d => host === d || host.endsWith("." + d));
+}
+
+// Si no estamos en un dominio permitido, no inyectar nada
+if (!isAllowedHost(location.hostname)) return;
 
 (function(){
   const PAT = /https?:\/\/myr-apiimg\.iberostar\.com\/media\/(?:180|360)\/[^\s'"<>]+\.html/ig;
@@ -131,16 +146,4 @@
   document.body.appendChild(btn);
 })();
 
-// --- Dominios permitidos (usa el dominio base; vale con subdominios) ---
-const ALLOWED_DOMAINS = [
-  "booking.iberostar.com",
-  "iberostar.com"
-];
 
-function isAllowedHost(host) {
-  host = host.toLowerCase();
-  return ALLOWED_DOMAINS.some(d => host === d || host.endsWith("." + d));
-}
-
-// Si no estamos en un dominio permitido, no inyectar nada
-if (!isAllowedHost(location.hostname)) return;
