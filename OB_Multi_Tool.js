@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.1.2
+// @version      1.2.0
 // @description  Panel con campo + botones.
 // @match        *://*/*
 // @grant        none
@@ -15,11 +15,11 @@
   try {
     console.log('OB Multi Tool started');
 
-    // ---------- CONFIG (LOCAL) ----------
+    // ---------- CONFIG ----------
+    // Controla en qué dominios se inyecta la UI
     const DEFAULT_CONFIG = {
-      // Usa coincidencia exacta o comodín "*.dominio.com"
       domains: [
-        'reservation.barcelo.com'
+        'reservation.barcelo.com'   // exacto; puedes usar "*.barcelo.com" también
       ]
     };
 
@@ -35,7 +35,7 @@
       return host === pattern || host.endsWith('.' + pattern);
     }
 
-    // Extrae pares {code, name} a partir de un atributo (p.ej. "data-target-room-code")
+    // Extrae pares {code, name_category} a partir de un atributo (p.ej. "data-target-room-code")
     function extractRoomCodes(attrName) {
       attrName = (attrName || '').trim();
       if (!attrName) return [];
@@ -70,7 +70,7 @@
           name = firstLine || code;
         }
 
-        rows.push({ code, name });
+        rows.push({ code, name_category: name });
       }
 
       // Deduplicar por código
@@ -85,18 +85,100 @@
       out.textContent = JSON.stringify(items, null, 2);
     }
 
-    // Descarga JSON con formato de nombre: YYYY-MM-DD_-HH-MM_Room_Codes.json
-    function downloadJSONFile(items) {
+    // Descarga JSON con nombre <base>_Room_Codes.json
+    function downloadJSONFile(items, baseName) {
       const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
-      const d = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      const fname = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_-${pad(d.getHours())}-${pad(d.getMinutes())}_Room_Codes.json`;
+      const safe = (baseName || 'NO_CODE').replace(/[^\w\-]+/g, '_');
+      const fname = `${safe}_Room_Codes.json`;
       a.href = URL.createObjectURL(blob);
       a.download = fname;
       document.documentElement.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
+    // Obtiene hotel_code desde __NEXT_DATA__ / URL (?hotel=) / scripts
+    function getHotelCode() {
+      const candidates = Array.from(document.querySelectorAll('script[type="application/json"]'))
+        .filter(s => {
+          const id = (s.id || '').toUpperCase();
+          return id.includes('NEXT_DATA') || id.includes('NEXI_DATA') || id.includes('NEXT') || id.includes('NEXI');
+        });
+
+      for (const s of candidates) {
+        try {
+          const txt = s.textContent || s.innerText || '';
+          if (!txt) continue;
+          const data = JSON.parse(txt);
+
+          const fromQuery = data?.query?.hotel ?? data?.props?.pageProps?.hotel ?? data?.props?.hotel;
+          if (fromQuery != null) return String(fromQuery);
+
+          const stack = [data];
+          while (stack.length) {
+            const cur = stack.pop();
+            if (cur && typeof cur === 'object') {
+              if (Object.prototype.hasOwnProperty.call(cur, 'hotel')) {
+                const val = cur['hotel'];
+                if (val != null && (typeof val === 'string' || typeof val === 'number')) {
+                  return String(val);
+                }
+              }
+              for (const k in cur) if (cur[k] && typeof cur[k] === 'object') stack.push(cur[k]);
+            }
+          }
+        } catch { /* seguir buscando */ }
+      }
+
+      try {
+        const u = new URL(location.href);
+        const q = u.searchParams.get('hotel');
+        if (q) return q;
+      } catch {}
+
+      for (const s of Array.from(document.scripts)) {
+        const txt = s.textContent || '';
+        const m = txt.match(/"hotel"\s*:\s*"?(?<id>\d+)"?/);
+        if (m && m.groups && m.groups.id) return m.groups.id;
+      }
+
+      return null;
+    }
+
+    // ---------- CHAIN CODE MANUAL (agrupado por código) ----------
+    // Soporta comodines tipo "*.dominio.com".
+    const CHAIN_CODES_MANUALES = {
+      "24876": [
+        "reservation.barcelo.com",
+        // "*.barcelo.com"  // ejemplo wildcard
+      ]
+      // "55555": ["reservation.ejemplo.com", "*.ejemplo.com"]
+    };
+
+    function patternMatchesDomain(pattern, host) {
+      pattern = String(pattern).toLowerCase().trim();
+      host = String(host).toLowerCase();
+      if (pattern === '*' || pattern === '*:*') return true;
+      if (pattern.startsWith('*.')) {
+        const base = pattern.slice(2);
+        return host === base || host.endsWith('.' + base);
+      }
+      return host === pattern || host.endsWith('.' + pattern);
+    }
+
+    // Devuelve el chain_code según dominio actual, o "n/d" si no hay coincidencia
+    function getChainCode() {
+      const host = location.hostname.toLowerCase();
+      for (const [chainCode, domains] of Object.entries(CHAIN_CODES_MANUALES)) {
+        for (const domain of domains) {
+          if (patternMatchesDomain(domain, host)) {
+            return chainCode;
+          }
+        }
+      }
+      // Aquí, en el futuro, se implementará scraping / lógica dinámica
+      return "n/d";
     }
 
     // ---------- UI (shadow DOM) ----------
@@ -105,16 +187,16 @@
 <style>
 :host { all: initial; }
 .panel {
-  position: fixed; left: 12px; top: 24px; z-index: 999999999; width: 320px;
+  position: fixed; left: 12px; top: 24px; z-index: 999999999; width: 360px;
   background: #fff; color: #111; border: 1px solid #ddd; border-radius: 8px; padding: 8px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.2); font-family: system-ui,Segoe UI,Roboto,Arial; font-size: 13px;
 }
 .row { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
 .input { flex:1; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:13px; }
+.small { width: 150px; }
 .close { padding:6px 8px; border-radius:4px; border:none; background:#eee; cursor:pointer; }
 .btn { flex:1; padding:8px; border-radius:6px; border:none; cursor:pointer; color:#fff; }
 .rc { background:#1976D2; }
-.hc { background:#4CAF50; }
 .hint { margin-top:8px; font-size:12px; color:#666; }
 .out {
   margin-top:8px; max-height: 260px; overflow:auto;
@@ -124,14 +206,17 @@
 </style>
 <div class="panel" id="panel">
   <div class="row">
-    <input id="ob_multi_input" class="input" placeholder="Atributo (p.ej. data-target-room-code)" />
+    <input id="ob_multi_input" class="input" placeholder="Texto a buscar (p.ej. data-target-room-code)" />
     <button id="ob_multi_close" class="close" title="Cerrar">✕</button>
   </div>
-  <div style="display:flex;gap:8px">
+  <div class="row">
     <button id="ob_multi_rcodes" class="btn rc">Search-Codes</button>
-    <button id="ob_multi_hcode" class="btn hc">Hotel-Code</button>
+    <input id="ob_hotel_code_input" class="input small" placeholder="Codigo del Hotel" title="Se usará para el nombre del archivo" />
   </div>
-  <div class="hint">Escribe el atributo a buscar y pulsa Search-Codes. Si lo dejas vacío, usa "data-target-room-code".</div>
+  <div class="hint">
+    Escribe el texto a buscar y pulsa Search-Codes. Si lo dejas vacío, usa "data-target-room-code".
+    El archivo se nombrará con lo que escribas en "Codigo del Hotel".
+  </div>
   <div id="ob_multi_out" class="out"></div>
 </div>`;
       return html;
@@ -158,9 +243,9 @@
 
         shadow.innerHTML = buildPanelHTML();
         const btnClose = shadow.getElementById('ob_multi_close');
-        const input = shadow.getElementById('ob_multi_input');
-        const btnR = shadow.getElementById('ob_multi_rcodes');
-        const btnH = shadow.getElementById('ob_multi_hcode');
+        const inputAttr = shadow.getElementById('ob_multi_input');
+        const btnSearch = shadow.getElementById('ob_multi_rcodes');
+        const inputHotelFile = shadow.getElementById('ob_hotel_code_input');
 
         trigger.addEventListener('click', () => {
           const panel = shadow.getElementById('panel');
@@ -169,41 +254,36 @@
 
         btnClose && btnClose.addEventListener('click', () => host.remove());
 
-        // ROOM-CODES: buscar, mostrar y (si hay) descargar JSON
-        btnR && btnR.addEventListener('click', () => {
-          const attr = (input.value || '').trim() || 'data-target-room-code';
+        // SEARCH-CODES: buscar, componer cabecera y (si hay) descargar JSON
+        btnSearch && btnSearch.addEventListener('click', () => {
+          const attr = (inputAttr.value || '').trim() || 'data-target-room-code';
           const items = extractRoomCodes(attr);
 
-          renderResultsInPanel(shadow, items);
+          // Cabecera: hotel_code (o "n/d") y chain_code (manual por dominio o "n/d")
+          const pageHotelCode = getHotelCode() || "n/d";
+          const chainCode = getChainCode() || "n/d";
+
+          const header = {
+            external_code_CMS: `${pageHotelCode}|${chainCode}`,
+            hotel_code: pageHotelCode,
+            chain_code: chainCode
+          };
+
+          const finalArray = [header, ...items];
+          renderResultsInPanel(shadow, finalArray);
 
           if (items.length > 0) {
-            downloadJSONFile(items);
+            const fileBase = (inputHotelFile.value || '').trim() || 'NO_CODE';
+            downloadJSONFile(finalArray, fileBase);
             showToast(`Encontrados ${items.length} resultados para "${attr}" (descargado)`, 3000);
           } else {
             showToast(`Sin coincidencias para "${attr}". No se descargó archivo.`, 3000);
           }
 
-          console.log('OB Multi Tool: Room-Codes ->', attr, items);
+          console.log('OB Multi Tool: Search-Codes ->', { attr, hotel_code: pageHotelCode, chain_code: chainCode, total: items.length });
         });
 
-
-        // HOTEL-CODE: extraer y mostrar
-        btnH && btnH.addEventListener('click', () => {
-          const code = getHotelCode();
-          const out = shadow.getElementById('ob_multi_out');
-          if (code) {
-            if (out) out.textContent = JSON.stringify({ hotel: code }, null, 2);
-            showToast(`Hotel-Code: ${code}`, 3000);
-            console.log('OB Multi Tool: Hotel-Code ->', code);
-          } else {
-            if (out) out.textContent = 'No se encontró hotel-code.';
-            showToast('No se encontró hotel-code', 3000);
-            console.warn('OB Multi Tool: Hotel-Code not found');
-          }
-        });
-
-
-        input && input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnR.click(); });
+        inputAttr && inputAttr.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnSearch.click(); });
 
         console.log('OB Multi Tool: shadow-based UI created');
         return true;
@@ -231,60 +311,6 @@
         clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', t);
       } catch (e) { console.warn('OB Multi Tool: toast failed', e); }
     }
-
-    // Obtiene el hotel-code buscando primero en __NEXT_DATA__/variantes y luego en la URL (?hotel=)
-function getHotelCode() {
-  // 1) Next.js data: ids típicos "__NEXT_DATA__", por si acaso soportamos "__NEXI_DATA__" (typo frecuente) y otros
-  const candidates = Array.from(document.querySelectorAll('script[type="application/json"]'))
-    .filter(s => {
-      const id = (s.id || '').toUpperCase();
-      return id.includes('NEXT_DATA') || id.includes('NEXI_DATA') || id.includes('NEXT') || id.includes('NEXI');
-    });
-
-  for (const s of candidates) {
-    try {
-      const txt = s.textContent || s.innerText || '';
-      if (!txt) continue;
-      const data = JSON.parse(txt);
-
-      // Rutas habituales
-      const fromQuery = data?.query?.hotel ?? data?.props?.pageProps?.hotel ?? data?.props?.hotel;
-      if (fromQuery != null) return String(fromQuery);
-
-      // Búsqueda recursiva por si cambia la estructura
-      const stack = [data];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (cur && typeof cur === 'object') {
-          if (Object.prototype.hasOwnProperty.call(cur, 'hotel')) {
-            const val = cur['hotel'];
-            if (val != null && (typeof val === 'string' || typeof val === 'number')) {
-              return String(val);
-            }
-          }
-          for (const k in cur) if (cur[k] && typeof cur[k] === 'object') stack.push(cur[k]);
-        }
-      }
-    } catch { /* seguir buscando */ }
-  }
-
-  // 2) URL ?hotel=XXXX
-  try {
-    const u = new URL(location.href);
-    const q = u.searchParams.get('hotel');
-    if (q) return q;
-  } catch {}
-
-  // 3) Último recurso: buscar en cualquier <script> el patrón "hotel":"12345" o "hotel":12345
-  for (const s of Array.from(document.scripts)) {
-    const txt = s.textContent || '';
-    const m = txt.match(/"hotel"\s*:\s*"?(?<id>\d+)"?/);
-    if (m && m.groups && m.groups.id) return m.groups.id;
-  }
-
-  return null;
-}
-
 
     // ---------- Inyección con reintentos ----------
     async function ensureInjectedWithRetries(cfg) {
