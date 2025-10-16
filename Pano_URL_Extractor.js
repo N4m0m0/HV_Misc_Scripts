@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Extractor visores 180/360 — botón único
+// @name         Extractor visores 180/360
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.2.4
+// @version      1.2.5
 // @description  Copia URLs de visores 180/360 (.html) de Iberostar. Un botón (en top) agrega resultados de todos los iframes.
 // @match        *://*/*
 // @grant        none
