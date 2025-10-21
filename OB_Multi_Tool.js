@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.2.0
-// @description  Panel con campo + botones.
+// @version      1.3.0
+// @description  Panel para busqueda de codigo en la pagina + extractor de codigo de hotel.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
