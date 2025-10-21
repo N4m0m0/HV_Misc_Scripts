@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.3.0
+// @version      1.4.0
 // @description  Panel para busqueda de codigo en la pagina + extractor de codigo de hotel.
 // @match        *://*/*
 // @grant        none
@@ -19,7 +19,8 @@
     // Controla en qué dominios se inyecta la UI
     const DEFAULT_CONFIG = {
       domains: [
-        'reservation.barcelo.com'   // exacto; puedes usar "*.barcelo.com" también
+        'reservation.barcelo.com', // se puede usar "*.barcelo.com" también
+        'book.royaltonresorts.com'  
       ]
     };
 
@@ -77,6 +78,19 @@
       const seen = new Set();
       return rows.filter(r => (seen.has(r.code) ? false : (seen.add(r.code), true)));
     }
+
+    function dedupeByCode(items) {
+      const seen = new Set();
+      const out = [];
+      for (const r of items || []) {
+        if (!r || !r.code) continue;
+        if (seen.has(r.code)) continue;
+        seen.add(r.code);
+        out.push(r);
+      }
+      return out;
+    }
+
 
     // Pinta resultados (JSON pretty) en el panel (shadow)
     function renderResultsInPanel(shadow, items) {
@@ -152,6 +166,9 @@
       "24876": [
         "reservation.barcelo.com",
         // "*.barcelo.com"  // ejemplo wildcard
+      ],
+      "26025": [
+        "book.royaltonresorts.com"
       ]
       // "55555": ["reservation.ejemplo.com", "*.ejemplo.com"]
     };
@@ -180,6 +197,25 @@
       // Aquí, en el futuro, se implementará scraping / lógica dinámica
       return "n/d";
     }
+
+    // ---------- ATTR PRESETS POR DOMINIO (para el campo "Texto a buscar") ----------
+      // Puedes poner uno o varios atributos por dominio. Soporta comodines "*.dominio.com".
+      const ATTR_PRESETS_POR_DOMINIO = {
+        "reservation.barcelo.com": ["data-target-room-code"],
+        "book.royaltonresorts.com": ["data-room-code"], 
+        // "*.otrodominio.com": ["data-room", "data-code"]
+      };
+
+      function getAttrPresetListForDomain() {
+        const host = location.hostname.toLowerCase();
+        for (const [pattern, attrList] of Object.entries(ATTR_PRESETS_POR_DOMINIO)) {
+          if (patternMatchesDomain(pattern, host)) {
+            return Array.isArray(attrList) ? attrList.filter(Boolean).map(s => String(s).trim()).filter(Boolean) : null;
+          }
+        }
+        return null;
+      }
+
 
     // ---------- UI (shadow DOM) ----------
     function buildPanelHTML() {
@@ -256,8 +292,23 @@
 
         // SEARCH-CODES: buscar, componer cabecera y (si hay) descargar JSON
         btnSearch && btnSearch.addEventListener('click', () => {
-          const attr = (inputAttr.value || '').trim() || 'data-target-room-code';
-          const items = extractRoomCodes(attr);
+          const userAttr = (inputAttr.value || '').trim();
+          // Si el usuario no escribe nada, usamos lista por dominio; si no hay, fallback al estándar
+          const attrsToTry = userAttr
+            ? [userAttr]
+            : (getAttrPresetListForDomain() || ['data-target-room-code']);
+
+          // Recoger de uno o varios atributos y fusionar sin duplicados
+          let items = [];
+          for (const a of attrsToTry) {
+            try {
+              items = items.concat(extractRoomCodes(a));
+            } catch (e) {
+              console.warn('OB Multi Tool: fallo extrayendo con attr', a, e);
+            }
+          }
+          items = dedupeByCode(items);
+
 
           // Cabecera: hotel_code (o "n/d") y chain_code (manual por dominio o "n/d")
           const pageHotelCode = getHotelCode() || "n/d";
@@ -270,17 +321,25 @@
           };
 
           const finalArray = [header, ...items];
+          const usedAttrLabel = userAttr ? userAttr : attrsToTry.join(' OR ');
           renderResultsInPanel(shadow, finalArray);
 
           if (items.length > 0) {
             const fileBase = (inputHotelFile.value || '').trim() || 'NO_CODE';
             downloadJSONFile(finalArray, fileBase);
-            showToast(`Encontrados ${items.length} resultados para "${attr}" (descargado)`, 3000);
+            showToast(`Encontrados ${items.length} resultados para "${usedAttrLabel}" (descargado)`, 3000);
           } else {
             showToast(`Sin coincidencias para "${attr}". No se descargó archivo.`, 3000);
           }
 
-          console.log('OB Multi Tool: Search-Codes ->', { attr, hotel_code: pageHotelCode, chain_code: chainCode, total: items.length });
+          console.log('OB Multi Tool: Search-Codes ->', {
+            attrsTried: attrsToTry,
+            userAttr,
+            hotel_code: pageHotelCode,
+            chain_code: chainCode,
+            total: items.length
+          });
+
         });
 
         inputAttr && inputAttr.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnSearch.click(); });
