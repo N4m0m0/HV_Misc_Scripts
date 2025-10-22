@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.6.0
+// @version      1.7.0
 // @description  Panel para busqueda de codigo en la pagina + extractor de codigo de hotel.
 // @match        *://*/*
 // @grant        none
@@ -205,6 +205,7 @@
       const ATTR_PRESETS_POR_DOMINIO = {
         "reservation.barcelo.com": ["data-target-room-code"],
         "book.royaltonresorts.com": ["data-room-code"], 
+        "book.grandlidoresorts.com": ["data-room-code"]
         // "*.otrodominio.com": ["data-room", "data-code"]
       };
 
