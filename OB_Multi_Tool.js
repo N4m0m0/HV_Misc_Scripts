@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.4.0
+// @version      1.5.0
 // @description  Panel para busqueda de codigo en la pagina + extractor de codigo de hotel.
 // @match        *://*/*
 // @grant        none
@@ -250,8 +250,7 @@
     <input id="ob_hotel_code_input" class="input small" placeholder="Codigo del Hotel" title="Se usará para el nombre del archivo" />
   </div>
   <div class="hint">
-    Escribe el texto a buscar y pulsa Search-Codes. Si lo dejas vacío, usa "data-target-room-code".
-    El archivo se nombrará con lo que escribas en "Codigo del Hotel".
+    Escribe el texto a buscar y pulsa Search-Codes. Si lo dejas vacío, usa los codigos predefinidos de la cadena.
   </div>
   <div id="ob_multi_out" class="out"></div>
 </div>`;
