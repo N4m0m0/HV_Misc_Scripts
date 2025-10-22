@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OB Multi Tool
 // @namespace    https://github.com/N4m0m0/HV_Misc_Scripts
-// @version      1.5.0
+// @version      1.6.0
 // @description  Panel para busqueda de codigo en la pagina + extractor de codigo de hotel.
 // @match        *://*/*
 // @grant        none
@@ -20,7 +20,8 @@
     const DEFAULT_CONFIG = {
       domains: [
         'reservation.barcelo.com', // se puede usar "*.barcelo.com" también
-        'book.royaltonresorts.com'  
+        'book.royaltonresorts.com',  
+        'book.grandlidoresorts.com'
       ]
     };
 
@@ -168,7 +169,8 @@
         // "*.barcelo.com"  // ejemplo wildcard
       ],
       "26025": [
-        "book.royaltonresorts.com"
+        "book.royaltonresorts.com",
+        'book.grandlidoresorts.com'
       ]
       // "55555": ["reservation.ejemplo.com", "*.ejemplo.com"]
     };
